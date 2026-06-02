@@ -1,18 +1,40 @@
-export type AgentStateValue =
+// lib/types.ts — shared types for the Fight Club Agents frontend.
+// These mirror the backend payloads in main.py / grid.py / agent.py / handler.py.
+
+export type AgentState =
   | "IDLE"
   | "MOVING"
   | "INTERACTING"
   | "WAITING_FOR_AI"
   | "EXECUTING_ACTION";
 
-export interface AgentData {
+export type MovementBias =
+  | "RANDOM"
+  | "TOWARD_AGENTS"
+  | "TOWARD_RESOURCES"
+  | "TOWARD_WEAK"
+  | "PATROL";
+
+export type ActionType =
+  | "ATTACK"
+  | "STEAL"
+  | "TRADE"
+  | "ALLY"
+  | "FLEE"
+  | "HEAL"
+  | "INTIMIDATE";
+
+export type ResourceType = "apple" | "gold_ore" | "herb";
+
+/** A single agent as serialised by Agent.to_dict() on the backend. */
+export interface Agent {
   id: string;
   name: string;
   archetype: string;
   x: number;
   y: number;
   color: string;
-  state: AgentStateValue;
+  state: AgentState;
   emotional_state: string;
   health: number;
   energy: number;
@@ -25,44 +47,39 @@ export interface AgentData {
   recent_memory: string[];
 }
 
-export interface ResourceData {
+/** Resource gem as serialised by Resource.to_dict(). */
+export interface Resource {
   x: number;
   y: number;
-  type: string;
+  type: ResourceType;
   color: string;
 }
 
-export interface GridData {
-  width: number;
-  height: number;
-}
-
+/** Full world snapshot — GameState.to_dict(). Broadcast every tick + on connect. */
 export interface GameStateMessage {
   type: "GAME_STATE";
   tick: number;
-  agents: AgentData[];
-  resources: ResourceData[];
-  grid: GridData;
+  agents: Agent[];
+  resources: Resource[];
+  grid: { width: number; height: number };
 }
 
-export interface AgentRef {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export interface EventMessage {
+/** A collision/interaction event — broadcast by EventHandler after the LLM resolves. */
+export interface GameEventMessage {
   type: "EVENT";
-  event_type: string;
+  event_type: "COLLISION";
   id: string;
   timestamp: string;
   tick: number;
-  agent_a: AgentRef;
-  agent_b: AgentRef;
+  agent_a: { id: string; name: string; color: string };
+  agent_b: { id: string; name: string; color: string };
   thought_process: string;
   spoken_dialogue: string;
-  action: string;
+  action: ActionType;
   emotional_state: string;
 }
 
-export type WsMessage = GameStateMessage | EventMessage;
+export type ServerMessage = GameStateMessage | GameEventMessage;
+
+/** Connection lifecycle state for UI affordances. */
+export type ConnectionStatus = "connecting" | "open" | "closed" | "error";
