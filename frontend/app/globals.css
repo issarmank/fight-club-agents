@@ -753,6 +753,7 @@ body {
 }
 .mini-feed .act {
   font-weight: 700;
+  color: var(--orange);
 }
 @media (max-width: 880px) {
   .detail-grid {

@@ -82,9 +82,9 @@ export default function Details() {
             <div className="mini-feed">
               {lines.map((l) => (
                 <div className="ev" key={l.id}>
-                  <span className="who" style={{ color: l.aColor }}>{l.a}</span>
-                  <span className="act" style={{ color: l.color }}>{l.verb}</span>
-                  <span className="who" style={{ color: l.bColor }}>{l.b}</span>
+                  <span className="who">{l.a}</span>
+                  <span className="act">{l.verb}</span>
+                  <span className="who">{l.b}</span>
                 </div>
               ))}
             </div>

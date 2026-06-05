@@ -45,7 +45,9 @@ export default function Arena() {
 
     const fit = () => {
       const pad = 44;
-      const avail = Math.min(wrap.clientWidth - pad, wrap.clientHeight - pad);
+      // Size based on column width only — the column now scrolls vertically
+      // so using clientHeight would inflate the canvas beyond the viewport.
+      const avail = wrap.clientWidth - pad * 2;
       SIZE = Math.max(280, Math.floor(avail));
       const grid = useGameStore.getState().grid.width || 30;
       CELL = SIZE / grid;
@@ -232,7 +234,7 @@ export default function Arena() {
       const sel = s.selectedId ? s.agentsById[s.selectedId] : null;
 
       // ally / enemy links for the selected agent
-      if (sel && sel.health > 0) {
+      if (sel && sel.health > 0 && sel.energy > 0) {
         const rs = rposRef.current[sel.id];
         const link = (id: string, color: string) => {
           const rp = rposRef.current[id];
@@ -274,7 +276,7 @@ export default function Arena() {
         if (!rp) rp = rposRef.current[a.id] = { x: a.x, y: a.y };
         rp.x += (a.x - rp.x) * 0.28;
         rp.y += (a.y - rp.y) * 0.28;
-        if (a.health > 0) drawAgent(a, rp, sel);
+        if (a.health > 0 && a.energy > 0) drawAgent(a, rp, sel);
       });
 
       raf = requestAnimationFrame(draw);
@@ -290,7 +292,7 @@ export default function Arena() {
       let best: Agent | null = null;
       let bd = Infinity;
       s.agents.forEach((a) => {
-        if (a.health <= 0) return;
+        if (a.health <= 0 || a.energy <= 0) return;
         const rp = rposRef.current[a.id];
         if (!rp) return;
         const dx = cx(rp.x) - mx;
@@ -332,8 +334,21 @@ export default function Arena() {
 
   return (
     <div className="col arena-col" ref={wrapRef}>
-      <canvas className="arena-canvas" ref={canvasRef} />
       <div className="arena-hint">click an agent · hover for name</div>
+      <div className="arena-canvas-wrap">
+        <canvas className="arena-canvas" ref={canvasRef} />
+        {!hasAgents && (
+          <div className="arena-status">
+            <div className="box">
+              {status === "open"
+                ? "Connected — waiting for the first world snapshot…"
+                : status === "connecting"
+                ? "Connecting to the arena…"
+                : "Arena offline. Start the backend (uvicorn) and it will connect automatically."}
+            </div>
+          </div>
+        )}
+      </div>
       <div className="arena-legend">
         <div className="lg">
           <span className="ring" style={{ borderColor: "#fff", background: "#bbb" }} />
@@ -348,17 +363,6 @@ export default function Arena() {
           under attack
         </div>
       </div>
-      {!hasAgents && (
-        <div className="arena-status">
-          <div className="box">
-            {status === "open"
-              ? "Connected — waiting for the first world snapshot…"
-              : status === "connecting"
-              ? "Connecting to the arena…"
-              : "Arena offline. Start the backend (uvicorn) and it will connect automatically."}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
