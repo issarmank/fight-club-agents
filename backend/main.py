@@ -14,6 +14,7 @@ from agents.personalities import create_agents
 from game.grid import GameState, GRID_WIDTH, GRID_HEIGHT
 from game.tick import TickManager
 from events.handler import EventHandler
+import memory.pinecone_memory as ltm
 
 connected_clients: set[WebSocket] = set()
 game_state: GameState | None = None
@@ -36,6 +37,10 @@ async def broadcast(message: dict) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global game_state, event_handler
+
+    if ltm.is_configured():
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, ltm.init_pinecone)
 
     agents = create_agents(GRID_WIDTH, GRID_HEIGHT)
     game_state = GameState(agents)
