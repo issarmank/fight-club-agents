@@ -30,6 +30,14 @@ class GameState:
         self.agents = agents
         self.resources: list[Resource] = []
         self.tick_count = 0
+        self.game_over = False
+        self._spawn_initial_resources()
+
+    def reset(self, new_agents: list[Agent]) -> None:
+        self.agents = new_agents
+        self.resources = []
+        self.tick_count = 0
+        self.game_over = False
         self._spawn_initial_resources()
 
     def _spawn_initial_resources(self) -> None:

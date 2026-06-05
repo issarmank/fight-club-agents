@@ -183,6 +183,10 @@ class EventHandler:
             actor.energy = min(100, actor.energy + NEGOTIATE_ENERGY)
             target.energy = min(100, target.energy + NEGOTIATE_ENERGY)
             actor.add_memory(f"Negotiated with {target.name}")
+            self._push_agent(actor, target)
+            self._push_agent(target, actor)
 
         elif action == "IGNORE":
             actor.add_memory(f"Ignored {target.name}")
+            self._push_agent(actor, target)
+            self._push_agent(target, actor)

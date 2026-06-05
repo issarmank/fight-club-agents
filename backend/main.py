@@ -77,6 +77,17 @@ async def get_agents():
     return [a.to_dict() for a in game_state.agents]
 
 
+@app.post("/restart")
+async def restart():
+    if not game_state or not event_handler:
+        return {"status": "not_ready"}
+    new_agents = create_agents(GRID_WIDTH, GRID_HEIGHT)
+    game_state.reset(new_agents)
+    event_handler._refresh_agent_map()
+    await broadcast(game_state.to_dict())
+    return {"status": "restarted"}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
