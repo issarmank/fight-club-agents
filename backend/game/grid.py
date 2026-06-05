@@ -72,21 +72,30 @@ class GameState:
         if agent.state.value in ("INTERACTING", "WAITING_FOR_AI", "EXECUTING_ACTION"):
             return
 
-        dx, dy = self._choose_direction(agent)
-        nx = max(0, min(GRID_WIDTH - 1, agent.x + dx))
-        ny = max(0, min(GRID_HEIGHT - 1, agent.y + dy))
-
-        # Don't collide — just stop. Collision detection runs separately.
         others_pos = {(a.x, a.y) for a in self.agents if a.id != agent.id}
-        if (nx, ny) not in others_pos:
-            agent.x = nx
-            agent.y = ny
+
+        preferred = self._choose_direction(agent)
+        # Build candidate list: preferred first, then the remaining cardinal
+        # directions in a random order so agents don't all jam in one direction.
+        fallbacks = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        random.shuffle(fallbacks)
+        candidates = [preferred] + [d for d in fallbacks if d != preferred]
+
+        for dx, dy in candidates:
+            if dx == 0 and dy == 0:
+                continue  # skip stay-put; only do it if every direction is blocked
+            nx = max(0, min(GRID_WIDTH - 1, agent.x + dx))
+            ny = max(0, min(GRID_HEIGHT - 1, agent.y + dy))
+            if (nx, ny) not in others_pos:
+                agent.x = nx
+                agent.y = ny
+                break
 
         from agents.agent import AgentState
         agent.state = AgentState.MOVING
 
     def _choose_direction(self, agent: Agent) -> tuple[int, int]:
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0), (0, 0)]
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
 
         if agent.movement_bias == MovementBias.PATROL and agent.patrol_origin:
             ox, oy = agent.patrol_origin
@@ -128,19 +137,26 @@ class GameState:
         return random.choice(options) if options else (0, 0)
 
     def detect_collisions(self) -> list[tuple[Agent, Agent]]:
-        pos_map: dict[tuple[int, int], list[Agent]] = {}
-        for agent in self.agents:
-            if agent.health <= 0:
-                continue
-            key = (agent.x, agent.y)
-            pos_map.setdefault(key, []).append(agent)
-
+        # Trigger when two agents are adjacent (Manhattan distance <= 1).
+        # Exact-tile overlap never happens because move_agent blocks it, so
+        # proximity-based detection is required for interactions to fire at all.
+        alive = [
+            a for a in self.agents
+            if a.health > 0 and a.energy > 0 and a.is_available()
+        ]
+        engaged: set[str] = set()
         collisions = []
-        for agents_at_pos in pos_map.values():
-            if len(agents_at_pos) >= 2:
-                a, b = agents_at_pos[0], agents_at_pos[1]
-                if a.is_available() and b.is_available():
+        for i, a in enumerate(alive):
+            if a.id in engaged:
+                continue
+            for b in alive[i + 1:]:
+                if b.id in engaged:
+                    continue
+                if abs(a.x - b.x) + abs(a.y - b.y) <= 1:
                     collisions.append((a, b))
+                    engaged.add(a.id)
+                    engaged.add(b.id)
+                    break
         return collisions
 
     def to_dict(self) -> dict:

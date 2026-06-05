@@ -58,6 +58,9 @@ class Agent:
         self.kill_count = 0
         self.interaction_count = 0
 
+        self.death_tick: Optional[int] = None
+        self.in_flight_llm: bool = False
+
     def add_memory(self, event: str) -> None:
         self.short_term_memory.append(event)
 
@@ -66,7 +69,23 @@ class Agent:
             self.state in (AgentState.IDLE, AgentState.MOVING)
             and self.interaction_cooldown == 0
             and self.health > 0
+            and self.energy > 0
         )
+
+    def to_delta_dict(self) -> dict:
+        """Return only the mutable fields needed for per-tick delta updates."""
+        return {
+            "id": self.id,
+            "x": self.x,
+            "y": self.y,
+            "health": max(0, self.health),
+            "energy": max(0, self.energy),
+            "gold": max(0, self.gold),
+            "state": self.state.value,
+            "emotional_state": self.emotional_state,
+            "kill_count": self.kill_count,
+            "interaction_count": self.interaction_count,
+        }
 
     def to_dict(self) -> dict:
         return {
