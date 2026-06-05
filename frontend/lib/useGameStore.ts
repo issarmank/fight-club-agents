@@ -13,6 +13,8 @@ import type {
   Agent,
   Resource,
   GameEventMessage,
+  RespawnMessage,
+  RoundOverMessage,
   ServerMessage,
   ConnectionStatus,
 } from "./types";
@@ -29,8 +31,10 @@ interface GameStore {
   resources: Resource[];
   grid: { width: number; height: number };
   events: GameEventMessage[]; // newest first
+  respawnEvents: RespawnMessage[]; // newest first
+  roundOvers: RoundOverMessage[]; // newest first
   selectedId: string | null;
-  /** Bumped on every GAME_STATE so non-React render loops can detect new frames. */
+  /** Bumped on every GAME_STATE or GAME_DELTA so non-React render loops can detect new frames. */
   frame: number;
 
   select: (id: string | null) => void;
@@ -47,17 +51,28 @@ export const useGameStore = create<GameStore>((set) => ({
   resources: [],
   grid: { width: 30, height: 30 },
   events: [],
+  respawnEvents: [],
+  roundOvers: [],
   selectedId: null,
   frame: 0,
 
   select: (id) => set({ selectedId: id }),
   setStatus: (status) => set({ status }),
   reset: () =>
-    set({ tick: 0, agents: [], agentsById: {}, resources: [], events: [] }),
+    set({
+      tick: 0,
+      agents: [],
+      agentsById: {},
+      resources: [],
+      events: [],
+      respawnEvents: [],
+      roundOvers: [],
+    }),
 
   ingest: (msg) =>
     set((state) => {
       if (msg.type === "GAME_STATE") {
+        // Full snapshot — replace everything (on-connect only)
         const agentsById: Record<string, Agent> = {};
         for (const a of msg.agents) agentsById[a.id] = a;
         return {
@@ -69,8 +84,43 @@ export const useGameStore = create<GameStore>((set) => ({
           frame: state.frame + 1,
         };
       }
-      // EVENT
-      return { events: [msg, ...state.events].slice(0, MAX_EVENTS) };
+
+      if (msg.type === "GAME_DELTA") {
+        // Merge delta fields into the existing agentsById map
+        const agentsById = { ...state.agentsById };
+        for (const delta of msg.agents) {
+          const existing = agentsById[delta.id];
+          if (existing) {
+            agentsById[delta.id] = { ...existing, ...delta };
+          }
+        }
+        const agents = state.agents.map((a) => agentsById[a.id] ?? a);
+        return {
+          tick: msg.tick,
+          agents,
+          agentsById,
+          resources: msg.resources,
+          frame: state.frame + 1,
+        };
+      }
+
+      if (msg.type === "RESPAWN") {
+        return {
+          respawnEvents: [msg, ...state.respawnEvents].slice(0, MAX_EVENTS),
+        };
+      }
+
+      if (msg.type === "ROUND_OVER") {
+        return {
+          roundOvers: [msg, ...state.roundOvers].slice(0, MAX_EVENTS),
+        };
+      }
+
+      // EVENT (COLLISION) — deduplicate by id to guard against double-delivery
+      if (state.events.some((ev) => ev.id === (msg as GameEventMessage).id)) {
+        return state;
+      }
+      return { events: [msg as GameEventMessage, ...state.events].slice(0, MAX_EVENTS) };
     }),
 }));
 

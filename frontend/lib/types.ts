@@ -22,7 +22,9 @@ export type ActionType =
   | "ALLY"
   | "FLEE"
   | "HEAL"
-  | "INTIMIDATE";
+  | "INTIMIDATE"
+  | "NEGOTIATE"
+  | "IGNORE";
 
 export type ResourceType = "apple" | "gold_ore" | "herb";
 
@@ -55,13 +57,37 @@ export interface Resource {
   color: string;
 }
 
-/** Full world snapshot — GameState.to_dict(). Broadcast every tick + on connect. */
+/** Full world snapshot — GameState.to_dict(). Sent on connect only. */
 export interface GameStateMessage {
   type: "GAME_STATE";
   tick: number;
   agents: Agent[];
   resources: Resource[];
   grid: { width: number; height: number };
+}
+
+/**
+ * Lightweight per-tick delta — only mutable fields.
+ * Sent every tick instead of the full GAME_STATE.
+ */
+export interface AgentDelta {
+  id: string;
+  x: number;
+  y: number;
+  health: number;
+  energy: number;
+  gold: number;
+  state: AgentState;
+  emotional_state: string;
+  kill_count: number;
+  interaction_count: number;
+}
+
+export interface GameDeltaMessage {
+  type: "GAME_DELTA";
+  tick: number;
+  agents: AgentDelta[];
+  resources: Resource[];
 }
 
 /** A collision/interaction event — broadcast by EventHandler after the LLM resolves. */
@@ -79,7 +105,27 @@ export interface GameEventMessage {
   emotional_state: string;
 }
 
-export type ServerMessage = GameStateMessage | GameEventMessage;
+/** Broadcast when a dead agent respawns after RESPAWN_TICKS. */
+export interface RespawnMessage {
+  type: "RESPAWN";
+  tick: number;
+  agent: { id: string; name: string; color: string };
+  x: number;
+  y: number;
+}
+
+/** Broadcast when all agents are simultaneously dead. */
+export interface RoundOverMessage {
+  type: "ROUND_OVER";
+  tick: number;
+}
+
+export type ServerMessage =
+  | GameStateMessage
+  | GameDeltaMessage
+  | GameEventMessage
+  | RespawnMessage
+  | RoundOverMessage;
 
 /** Connection lifecycle state for UI affordances. */
 export type ConnectionStatus = "connecting" | "open" | "closed" | "error";
