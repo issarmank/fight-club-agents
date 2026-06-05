@@ -20,7 +20,7 @@ export default function EventFeed() {
             agents collide.
           </div>
         ) : (
-          events.map((e) => {
+          events.filter((e) => e.agent_a && e.agent_b).map((e) => {
             const meta = ACTION_META[e.action] ?? { color: "#888" };
             return (
               <div className="ev" key={e.id}>

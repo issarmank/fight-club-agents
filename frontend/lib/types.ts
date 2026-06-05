@@ -105,6 +105,19 @@ export interface GameEventMessage {
   emotional_state: string;
 }
 
+/** Broadcast when one agent remains — they are the winner. */
+export interface GameOverMessage {
+  type: "GAME_OVER";
+  tick: number;
+  winner: {
+    id: string;
+    name: string;
+    color: string;
+    archetype: string;
+    kill_count: number;
+  };
+}
+
 /** Broadcast when a dead agent respawns after RESPAWN_TICKS. */
 export interface RespawnMessage {
   type: "RESPAWN";
@@ -124,6 +137,7 @@ export type ServerMessage =
   | GameStateMessage
   | GameDeltaMessage
   | GameEventMessage
+  | GameOverMessage
   | RespawnMessage
   | RoundOverMessage;
 

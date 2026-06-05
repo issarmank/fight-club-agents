@@ -13,11 +13,14 @@ import type {
   Agent,
   Resource,
   GameEventMessage,
+  GameOverMessage,
   RespawnMessage,
   RoundOverMessage,
   ServerMessage,
   ConnectionStatus,
 } from "./types";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const DEFAULT_URL =
   process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/ws";
@@ -33,6 +36,7 @@ interface GameStore {
   events: GameEventMessage[]; // newest first
   respawnEvents: RespawnMessage[]; // newest first
   roundOvers: RoundOverMessage[]; // newest first
+  gameOver: GameOverMessage["winner"] | null;
   selectedId: string | null;
   /** Bumped on every GAME_STATE or GAME_DELTA so non-React render loops can detect new frames. */
   frame: number;
@@ -41,6 +45,7 @@ interface GameStore {
   ingest: (msg: ServerMessage) => void;
   setStatus: (s: ConnectionStatus) => void;
   reset: () => void;
+  restart: () => Promise<void>;
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -53,6 +58,7 @@ export const useGameStore = create<GameStore>((set) => ({
   events: [],
   respawnEvents: [],
   roundOvers: [],
+  gameOver: null,
   selectedId: null,
   frame: 0,
 
@@ -67,7 +73,12 @@ export const useGameStore = create<GameStore>((set) => ({
       events: [],
       respawnEvents: [],
       roundOvers: [],
+      gameOver: null,
     }),
+  restart: async () => {
+    await fetch(`${API_URL}/restart`, { method: "POST" });
+    useGameStore.getState().reset();
+  },
 
   ingest: (msg) =>
     set((state) => {
@@ -104,6 +115,10 @@ export const useGameStore = create<GameStore>((set) => ({
         };
       }
 
+      if (msg.type === "GAME_OVER") {
+        return { gameOver: msg.winner };
+      }
+
       if (msg.type === "RESPAWN") {
         return {
           respawnEvents: [msg, ...state.respawnEvents].slice(0, MAX_EVENTS),
@@ -116,11 +131,10 @@ export const useGameStore = create<GameStore>((set) => ({
         };
       }
 
-      // EVENT (COLLISION) — deduplicate by id to guard against double-delivery
-      if (state.events.some((ev) => ev.id === (msg as GameEventMessage).id)) {
-        return state;
-      }
-      return { events: [msg as GameEventMessage, ...state.events].slice(0, MAX_EVENTS) };
+      // EVENT (COLLISION) — only accept genuine EVENT messages
+      if (msg.type !== "EVENT") return state;
+      if (state.events.some((ev) => ev.id === msg.id)) return state;
+      return { events: [msg, ...state.events].slice(0, MAX_EVENTS) };
     }),
 }));
 

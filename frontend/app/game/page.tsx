@@ -8,6 +8,7 @@ import Inspector from "@/components/game/Inspector";
 import EventFeed from "@/components/game/EventFeed";
 import Arena from "@/components/game/Arena";
 import Leaderboard from "@/components/game/Leaderboard";
+import WinOverlay from "@/components/game/WinOverlay";
 
 type MobileTab = "arena" | "feed" | "ranks";
 
@@ -17,6 +18,7 @@ export default function GamePage() {
 
   return (
     <div className="app">
+      <WinOverlay />
       <TopBar />
       <div className="main" data-tab={tab}>
         <div className="col col-left">
