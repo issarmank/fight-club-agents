@@ -31,6 +31,9 @@ export const metadata: Metadata = {
   title: "Fight Club Agents — an autonomous AI arena",
   description:
     "Twenty AI personalities. One 30×30 grid. No referee. Watch autonomous agents trade, lie, ally, betray and brawl in real time.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
