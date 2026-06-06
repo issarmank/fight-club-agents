@@ -57,6 +57,8 @@ export const ACTION_META: Record<ActionType, { color: string; verb: string }> = 
   FLEE: { color: "#8A8A8A", verb: "fled from" },
   HEAL: { color: "#2F8F5B", verb: "healed" },
   INTIMIDATE: { color: "#C2410C", verb: "intimidated" },
+  NEGOTIATE: { color: "#7C3AED", verb: "negotiated with" },
+  IGNORE: { color: "#6B7280", verb: "ignored" },
 };
 
 export const GRID_SIZE = 30;

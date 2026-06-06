@@ -1,7 +1,7 @@
 // components/landing/Reveal.tsx — fade/slide content in on scroll.
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 export default function Reveal({
   children,
@@ -10,7 +10,7 @@ export default function Reveal({
 }: {
   children: React.ReactNode;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: keyof React.JSX.IntrinsicElements;
 }) {
   const ref = useRef<HTMLElement | null>(null);
   const [shown, setShown] = useState(false);
@@ -33,10 +33,11 @@ export default function Reveal({
     return () => io.disconnect();
   }, []);
 
-  const Component = Tag as React.ElementType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Component = Tag as any;
   return (
     <Component
-      ref={ref as React.Ref<HTMLElement>}
+      ref={ref}
       className={`reveal ${shown ? "in" : ""} ${className}`}
     >
       {children}
